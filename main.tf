@@ -157,7 +157,6 @@ resource "aws_iam_user_policy_attachment" "webserver_restart_user_policy" {
 # Create Launch Template
 resource "aws_launch_template" "web_launch_template" {
   name = "web-launch-template"
-  version = $Latest
   image_id = "custom_AMI" # Specify the assumed custom AMI with nginx pre-installed and the default port changed to 8080 instead of 80
   instance_type = "t2.micro" # Specify the desired instance type
   security_groups = aws_security_group.web_sg.id
@@ -212,8 +211,6 @@ resource "aws_lb" "web_lb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.lb_sg.id]
   subnets            = [aws_subnet.public_subnet.id]
-
-  enable_deletion_protection = false
 
   enable_deletion_protection = false
 }
