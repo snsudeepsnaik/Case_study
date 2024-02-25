@@ -1,0 +1,15 @@
+Create an IAM user and attach policy to grant access to VPC, EC2, Load Balancer, AutoScaling.
+
+Create the AWS profile by running the below commands in the specified order. Adding that profile in terraform script will grant access to create resources.
+aws configure --profile zantac_poc_profile
+Enter the below details
+AWS Access Key ID : 
+AWS Secret Access Key
+Default region name : us-east-1
+Default output format : Blank
+
+After this, run below commands.
+
+terraform init
+terraform plan
+terraform apply
