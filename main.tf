@@ -2,8 +2,9 @@
 
 provider "aws" {
   region = "us-east-1" # Change to your desired AWS region
+  version = "< 4.0.0"
   profile = "zantac_poc_profile"
-  
+
 }
 
 # Create VPC
@@ -74,6 +75,7 @@ resource "aws_route_table_association" "public_subnet_association" {
 # Create Security Groups
 resource "aws_security_group" "lb_sg" {
   vpc_id = aws_vpc.zantac_poc_vpc.id
+  name = "lb_sg_name"
 
   egress {
     from_port   = 0
@@ -96,7 +98,7 @@ resource "aws_security_group" "lb_sg" {
 
 resource "aws_security_group" "web_sg" {
   vpc_id = aws_vpc.zantac_poc_vpc.id
-
+  name = "web_sg_name"
   egress {
     from_port   = 0
     to_port     = 0
@@ -108,7 +110,7 @@ resource "aws_security_group" "web_sg" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    security_group_ids = [aws_security_group.lb_sg.id]
+    security_groups = [aws_security_group.lb_sg.name]
   }
 
   tags = {
@@ -122,8 +124,8 @@ resource "aws_iam_user" "webserver_restart_user" {
 }
 
 #Custom Policy to only restart an instance.
-data "aws_iam_policy_document" "restart_policy" {
-  source_json = <<-EOF
+data "aws_iam_policy_document" "restart_policy_document" {
+  source_json = <<EOF
   {
     "Version": "2012-10-17",
     "Statement": [
@@ -145,7 +147,7 @@ data "aws_iam_policy_document" "restart_policy" {
 resource "aws_iam_policy" "restart_policy" {
   name        = "RestartPolicy"
   description = "Custom policy to restart web server"
-  policy      = data.aws_iam_policy_document.restart_policy.json
+  policy      = data.aws_iam_policy_document.restart_policy_document.json
 }
 
 # Attach IAM Policy to User
@@ -159,9 +161,8 @@ resource "aws_launch_template" "web_launch_template" {
   name = "web-launch-template"
   image_id = "custom_AMI" # Specify the assumed custom AMI with nginx pre-installed and the default port changed to 8080 instead of 80
   instance_type = "t2.micro" # Specify the desired instance type
-  security_groups = aws_security_group.web_sg.id
   key_name = "keypair_name"
-  
+
 #Block device configuration.
   block_device_mappings {
     device_name = "/dev/sda1"
@@ -169,13 +170,9 @@ resource "aws_launch_template" "web_launch_template" {
       volume_size = 30
       volume_type = "gp3"
     }
-	  root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-  }
   }
 
-#  user_data = <<-EOF
+#  user_data = <<EOF
 #              #!/bin/bash
 #              sed -i 's/80/8080/' /etc/nginx/nginx.conf
 #              service nginx restart
@@ -191,7 +188,7 @@ resource "aws_autoscaling_group" "web_autoscaling_group" {
   desired_capacity     = 1
   max_size             = 2
   min_size             = 1
-  launch_template = aws_launch_template.web_launch_template.id
+  launch_configuration = aws_launch_template.web_launch_template.id
   health_check_type = "ELB"
   force_delete = true
   default_cooldown = 300
